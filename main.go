@@ -18,6 +18,7 @@ func say(id int, phrase string) {
 }
 
 func main() {
-	say(1, "Golang is awesome")
-	say(2, "Rust is faster")
+	go say(1, "Golang is awesome")
+	go say(2, "Cats are cute")
+	time.Sleep(time.Second * 5)
 }
