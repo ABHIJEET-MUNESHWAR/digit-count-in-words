@@ -2,22 +2,9 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
-	"sync"
-	"time"
 	"unicode"
 )
-
-// TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
-// the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
-func say(id int, phrase string) {
-	for _, word := range strings.Fields(phrase) {
-		fmt.Printf("Worker #%d says %s...\n", id, word)
-		dur := time.Duration(rand.Intn(100)) * time.Millisecond
-		time.Sleep(dur)
-	}
-}
 
 // countDigits counts the number of digit characters in a given string.
 //
@@ -42,25 +29,20 @@ func countDigits(str string) int {
 type counter map[string]int
 
 func countDigitsInWords(phrase string) counter {
-	var wg sync.WaitGroup
-	syncStats := new(sync.Map)
 	words := strings.Fields(phrase)
-	wg.Add(len(words))
+	counted := make(chan int)
+	go func() {
+		for _, word := range words {
+			counted <- countDigits(word)
+		}
+	}()
+	stats := counter{}
 	for _, word := range words {
-		go func() {
-			defer wg.Done()
-			count := countDigits(word)
-			syncStats.Store(word, count)
-		}()
+		count := <-counted
+		stats[word] = count
 	}
-	wg.Wait()
-	return nil
+	return stats
 }
 func main() {
-	messages := make(chan string)
-	go func() {
-		messages <- "Ping"
-	}()
-	msg := <-messages
-	fmt.Println(msg)
+	fmt.Println(countDigitsInWords("on1 two22 th333"))
 }
