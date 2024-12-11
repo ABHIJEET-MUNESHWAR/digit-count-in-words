@@ -24,38 +24,41 @@ type pair struct {
 }
 
 func countDigitsInWords(next func() string) counter {
-
-	pending := make(chan string)
-	go submitWords(next, pending)
-
-	counted := make(chan pair)
-	go countWords(pending, counted)
-
+	pending := submitWords(next)
+	counted := countWords(pending)
 	return fillStats(counted)
 }
 
 // submitWords sends words to be counted.
-func submitWords(next func() string, out chan string) {
+func submitWords(next func() string) chan string {
 	// sends words to be counted
-	for {
-		word := next()
-		out <- word
-		if word == "" {
-			break
+	out := make(chan string)
+	go func() {
+		for {
+			word := next()
+			out <- word
+			if word == "" {
+				break
+			}
 		}
-	}
+	}()
+	return out
 }
 
 // countWords counts digits in words.
-func countWords(in chan string, out chan pair) {
-	for {
-		word := <-in
-		count := countDigits(word)
-		out <- pair{word, count}
-		if word == "" {
-			break
+func countWords(in chan string) chan pair {
+	out := make(chan pair)
+	go func() {
+		for {
+			word := <-in
+			count := countDigits(word)
+			out <- pair{word, count}
+			if word == "" {
+				break
+			}
 		}
-	}
+	}()
+	return out
 }
 
 // fillStats prepares the final statistics.
