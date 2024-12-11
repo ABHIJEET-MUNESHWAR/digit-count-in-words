@@ -6,14 +6,6 @@ import (
 	"unicode"
 )
 
-// countDigits counts the number of digit characters in a given string.
-//
-// Parameters:
-//   - str: The input string to be analyzed.
-//
-// Returns:
-//
-//	An integer representing the count of digit characters found in the input string.
 func countDigits(str string) int {
 	count := 0
 	for _, char := range str {
@@ -24,8 +16,6 @@ func countDigits(str string) int {
 	return count
 }
 
-// counter stores the number of digits in each word.
-// The key is the word, and the value is the number of digits.
 type counter map[string]int
 
 type pair struct {
@@ -34,32 +24,45 @@ type pair struct {
 }
 
 func countDigitsInWords(next func() string) counter {
+
 	pending := make(chan string)
+	go submitWords(next, pending)
+
 	counted := make(chan pair)
+	go countWords(pending, counted)
+
+	return fillStats(counted)
+}
+
+// submitWords sends words to be counted.
+func submitWords(next func() string, out chan string) {
 	// sends words to be counted
-	go func() {
-		for {
-			word := next()
-			pending <- word
-			if word == "" {
-				break
-			}
+	for {
+		word := next()
+		out <- word
+		if word == "" {
+			break
 		}
-	}()
-	// counts digits in words
-	go func() {
-		for {
-			word := <-pending
-			count := countDigits(word)
-			counted <- pair{word, count}
-			if word == "" {
-				break
-			}
+	}
+}
+
+// countWords counts digits in words.
+func countWords(in chan string, out chan pair) {
+	for {
+		word := <-in
+		count := countDigits(word)
+		out <- pair{word, count}
+		if word == "" {
+			break
 		}
-	}()
+	}
+}
+
+// fillStats prepares the final statistics.
+func fillStats(in chan pair) counter {
 	stats := counter{}
 	for {
-		p := <-counted
+		p := <-in
 		if p.word == "" {
 			break
 		}
@@ -67,6 +70,7 @@ func countDigitsInWords(next func() string) counter {
 	}
 	return stats
 }
+
 func wordGenerator(phrase string) func() string {
 	words := strings.Fields(phrase)
 	idx := 0
