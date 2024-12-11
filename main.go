@@ -28,21 +28,47 @@ func countDigits(str string) int {
 // The key is the word, and the value is the number of digits.
 type counter map[string]int
 
-func countDigitsInWords(phrase string) counter {
-	words := strings.Fields(phrase)
-	counted := make(chan int)
+type pair struct {
+	word  string
+	count int
+}
+
+func countDigitsInWords(next func() string) counter {
+	counted := make(chan pair)
 	go func() {
-		for _, word := range words {
-			counted <- countDigits(word)
+		for {
+			word := next()
+			count := countDigits(word)
+			counted <- pair{word, count}
+			if word == "" {
+				break
+			}
 		}
 	}()
 	stats := counter{}
-	for _, word := range words {
-		count := <-counted
-		stats[word] = count
+	for {
+		p := <-counted
+		if p.word == "" {
+			break
+		}
+		stats[p.word] = p.count
 	}
 	return stats
 }
+func wordGenerator(phrase string) func() string {
+	words := strings.Fields(phrase)
+	idx := 0
+	return func() string {
+		if idx >= len(words) {
+			return ""
+		}
+		word := words[idx]
+		idx++
+		return word
+	}
+}
 func main() {
-	fmt.Println(countDigitsInWords("on1 two22 th333"))
+	phrase := "on1 two22 th333"
+	next := wordGenerator(phrase)
+	fmt.Println(countDigitsInWords(next))
 }
