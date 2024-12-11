@@ -34,10 +34,22 @@ type pair struct {
 }
 
 func countDigitsInWords(next func() string) counter {
+	pending := make(chan string)
 	counted := make(chan pair)
+	// sends words to be counted
 	go func() {
 		for {
 			word := next()
+			pending <- word
+			if word == "" {
+				break
+			}
+		}
+	}()
+	// counts digits in words
+	go func() {
+		for {
+			word := <-pending
 			count := countDigits(word)
 			counted <- pair{word, count}
 			if word == "" {
